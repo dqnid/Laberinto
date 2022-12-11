@@ -19,62 +19,98 @@ BEGIN{
 }
 END{
   resultado = laberinto($tablero,$s,$t)
-  recorreCamino(resultado) 
+  print "\n Recorrido seguido: \n"
+  recorreRuta(resultado)
 }
 
 def laberinto(tablero,s,t)
-  nodosAbiertos = []
-  nodosCerrados = []
+  nodosVisitados = [] # Array de estados
+  nodosAbiertos = [] # Array de punteros a nodo
   g = 0
 
   print tablero
   
   # x,y,o.
-  raiz = Nodo.new(s,0,calculaH(s,s,t,tablero,nodosCerrados),nil)
+  raiz = Nodo.new(s,g,calculaH(s,s,t,tablero),nil)
   actual = raiz
+  nodosAbiertos.push(actual)
+  nodosVisitados.push(actual)
   while (true) do
-    # Comprobar estado
+    # Comprobar fin
     if ( actual.estado[0] == t[0] && actual.estado[1] == t[1] )
       return actual
     end
-
-    # Depuración
-    sleep(0.1)
-    printf("\nPadre: ")
-    print actual.estado
-
-    # Generar árbol 
-    # Gira a la derecha
-    n_estado = girar(actual.estado,0)
-    actual.hijos.push(Nodo.new(n_estado,actual.g+1,calculaH(actual.estado,n_estado,t,tablero,nodosCerrados),actual))
-
-    # Gira a la izq
+    
     n_estado = girar(actual.estado,1)
-    actual.hijos.push(Nodo.new(n_estado,actual.g+1,calculaH(actual.estado,n_estado,t,tablero,nodosCerrados),actual))
-
-    # Avanza
-    n_estado = avanzar(actual.estado)
-    actual.hijos.push(Nodo.new(n_estado,actual.g+1,calculaH(actual.estado,n_estado,t,tablero,nodosCerrados),actual))
-
-    printf("Hijos: ")
-    for i in actual.hijos
-      print i.estado
-      nodosAbiertos.push(i)
+    hijo = Nodo.new(n_estado,actual.g,calculaH(actual.estado,n_estado,t,tablero), actual)
+    if (nodosVisitados.include?(hijo.estado))
+      actual.hijos[0] = nil
+    else
+      actual.hijos[0] = hijo
+      nodosAbiertos.push(hijo)
+      nodosVisitados.push(hijo.estado)
     end
 
-    nodosCerrados.push(actual)
+    n_estado = girar(actual.estado,0)
+    hijo = Nodo.new(n_estado,actual.g,calculaH(actual.estado,n_estado,t,tablero), actual)
+    if (nodosVisitados.include?(hijo.estado))
+      actual.hijos[1] = nil
+    else
+      actual.hijos[1] = hijo
+      nodosAbiertos.push(hijo)
+      nodosVisitados.push(hijo.estado)
+    end
+
+    n_estado = avanzar(actual.estado,tablero)
+    if (n_estado == nil)
+      actual.hijos[2] = nil
+    else
+      hijo = Nodo.new(n_estado,actual.g+1,calculaH(actual.estado,n_estado,t,tablero), actual)
+      if (nodosVisitados.include?(hijo.estado))
+        actual.hijos[2] = nil
+      else
+        actual.hijos[2] = hijo
+        nodosAbiertos.push(hijo)
+        nodosVisitados.push(hijo.estado)
+      end
+    end
+
+    # Elegir nodo a explorar y cerrar el actual
+    mejor = nodosAbiertos[0]
+    for i in nodosAbiertos 
+      if (i == nil || i.h == nil)
+        next
+      end
+      if (i.h < mejor.h) 
+        mejor = i
+      end
+    end
+
     nodosAbiertos.delete(actual)
-    nodosAbiertos = nodosAbiertos.compact
-    actual = getOptimo(nodosAbiertos)
+    actual = mejor
+    print "\n #{actual.estado}"
+    nodosAbiertos.delete(actual)
   end
+end
+
+def recorreRuta(nodo)
+  print("\n")
+  while (nodo != nil) do
+    print nodo.estado
+    nodo = nodo.padre
+  end
+end
+
+def calculaH(pre, pos, t, tablero)
+  return ((t[0]-pos[0])+(t[1]-pos[1])) 
 end
 
 # 0 derecha
 # 1 abajo
 # 2 izquierda
 # 3 arriba
-def girar(pos,grados)
-  case (grados)
+def girar(pos,dir)
+  case (dir)
     when 0
       return [pos[0],pos[1],(pos[2]+1)%4]
     when 1
@@ -82,62 +118,42 @@ def girar(pos,grados)
   end
 end
 
-def avanzar(pos)
+def pared?(pos1,pos2,tablero)
+  if (tablero[2].include?([[pos2[0],pos2[1]],[pos1[0],pos1[1]]]) || tablero[2].include?([[pos1[0],pos1[1]],[pos2[0],pos2[1]]]))
+    return true
+  else 
+    return false
+  end
+end
+
+def fuera?(pos,tablero)
+  if (pos[0] > tablero[0] || pos[0] < 1 || pos[1] > tablero[1] || pos[1] < 1)
+    return true
+  else
+    return false
+  end
+end
+
+def avanzar(pos,tablero)
   case (pos[2])
     when 0
-      return [pos[0]+1,pos[1],pos[2]]
+      n_pos = [pos[0]+1,pos[1],pos[2]]
     when 1
-      return [pos[0],pos[1]-1,pos[2]]
+      n_pos = [pos[0],pos[1]-1,pos[2]]
     when 2
-      return [pos[0]-1,pos[1],pos[2]]
+      n_pos = [pos[0]-1,pos[1],pos[2]]
     when 3
-      return [pos[0],pos[1]+1,pos[2]]
+      n_pos = [pos[0],pos[1]+1,pos[2]]
   end
-end
 
-# Recordar comprobar si la posición es válida. En caso de no serlo devolver nulo o infinito
-def calculaH(pre,pos,t,tablero,cerrados)
-  if ( pos[0] >= tablero[0] || pos[1] >= tablero[1] || pos[0] <= 0 || pos[1] <= 0 || pos[2] < 0 || pos[2] > 3)
+  if (pared?(pos,n_pos,tablero) || fuera?(pos,tablero))
     return nil
+  else 
+    return n_pos
   end
-  if (tablero[2].include?([[pos[0],pos[1]],[pre[0],pre[1]]]) || tablero[2].include?([[pre[0],pre[1]],[pos[0],pos[1]]]))
-    return nil
-  end
-  if (cerrados.include?(pos))
-    return nil
-  end
-  h = ((t[0]-pos[0])+(t[1]-pos[1])-((pos[0]-pre[0])+(pos[1]-pre[1])))+(2*(pos[2]-pre[2]).abs)
-  return h
-end
-
-def recorreCamino(nodo)
-  while (nodo.padre != nil) do
-    printf("\n #{nodo.estado}")
-    nodo = nodo.padre
-  end
-end
-
-def getOptimo(abiertos)
-  min = abiertos[0]
-  c = 1
-  while (min == nil || min.h == nil)
-    min = abiertos[c]
-    c+=1
-  end
-  for i in abiertos
-    if ( i.h == nil || i == nil)
-      next
-    elsif (min.h == nil)
-      min = i
-    elsif ( i.h < min.h)
-      min = i
-    end
-  end
-  return min
 end
 
 class Nodo
-  @abierto # 
   attr_accessor :estado # posición
   attr_accessor :g # distancia hasta el origen
   attr_accessor :h # distancia hasta la meta
@@ -147,16 +163,16 @@ class Nodo
   def initialize(estado, g, h, padre)
     self.hijos = []
     self.estado = estado
+    self.padre = padre
     self.g = g
     self.h = h
-    @abierto = true
-  end
-
-  def cerrar
-    @abierto = false
   end
 
   def abierto?
     return @abierto
+  end
+
+  def f
+    return (g + h)
   end
 end

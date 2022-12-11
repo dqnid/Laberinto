@@ -19,19 +19,19 @@ BEGIN{
 }
 END{
   resultado = laberinto($tablero,$s,$t)
-  print "\n Recorrido seguido: \n"
+  print "\n==================\nRecorrido seguido: "
   recorreRuta(resultado)
+  print "\n==================\n"
 }
 
 def laberinto(tablero,s,t)
   nodosVisitados = [] # Array de estados
   nodosAbiertos = [] # Array de punteros a nodo
-  g = 0
 
   print tablero
   
   # x,y,o.
-  raiz = Nodo.new(s,g,calculaH(s,s,t,tablero),nil)
+  raiz = Nodo.new(s,0,calculaH(s,s,t,tablero),nil)
   actual = raiz
   nodosAbiertos.push(actual)
   nodosVisitados.push(actual)
@@ -42,7 +42,7 @@ def laberinto(tablero,s,t)
     end
     
     n_estado = girar(actual.estado,1)
-    hijo = Nodo.new(n_estado,actual.g,calculaH(actual.estado,n_estado,t,tablero), actual)
+    hijo = Nodo.new(n_estado,actual.g+1,calculaH(actual.estado,n_estado,t,tablero), actual)
     if (nodosVisitados.include?(hijo.estado))
       actual.hijos[0] = nil
     else
@@ -52,7 +52,7 @@ def laberinto(tablero,s,t)
     end
 
     n_estado = girar(actual.estado,0)
-    hijo = Nodo.new(n_estado,actual.g,calculaH(actual.estado,n_estado,t,tablero), actual)
+    hijo = Nodo.new(n_estado,actual.g+1,calculaH(actual.estado,n_estado,t,tablero), actual)
     if (nodosVisitados.include?(hijo.estado))
       actual.hijos[1] = nil
     else
@@ -66,7 +66,7 @@ def laberinto(tablero,s,t)
       actual.hijos[2] = nil
     else
       hijo = Nodo.new(n_estado,actual.g+1,calculaH(actual.estado,n_estado,t,tablero), actual)
-      if (nodosVisitados.include?(hijo.estado))
+      if (nodosVisitados.include?(hijo.estado) || nodosVisitados.include?([hijo.estado[0],hijo.estado[1],0]) || nodosVisitados.include?([hijo.estado[0],hijo.estado[1],1]) || nodosVisitados.include?([hijo.estado[0],hijo.estado[1],2]) || nodosVisitados.include?([hijo.estado[0],hijo.estado[1],3]))
         actual.hijos[2] = nil
       else
         actual.hijos[2] = hijo
@@ -78,10 +78,10 @@ def laberinto(tablero,s,t)
     # Elegir nodo a explorar y cerrar el actual
     mejor = nodosAbiertos[0]
     for i in nodosAbiertos 
-      if (i == nil || i.h == nil)
+      if (i == nil || i.f == nil)
         next
       end
-      if (i.h < mejor.h) 
+      if (i.f < mejor.f) 
         mejor = i
       end
     end
@@ -94,9 +94,9 @@ def laberinto(tablero,s,t)
 end
 
 def recorreRuta(nodo)
-  print("\n")
   while (nodo != nil) do
     print nodo.estado
+    print ":#{nodo.g} "
     nodo = nodo.padre
   end
 end
@@ -106,9 +106,9 @@ def calculaH(pre, pos, t, tablero)
 end
 
 # 0 derecha
-# 1 abajo
+# 1 arriba
 # 2 izquierda
-# 3 arriba
+# 3 abajo
 def girar(pos,dir)
   case (dir)
     when 0
@@ -168,11 +168,7 @@ class Nodo
     self.h = h
   end
 
-  def abierto?
-    return @abierto
-  end
-
   def f
-    return (g + h)
+    return (self.g + self.h)
   end
 end

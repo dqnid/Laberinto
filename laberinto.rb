@@ -114,7 +114,7 @@ def girar(pos,dir)
     when 0
       return [pos[0],pos[1],(pos[2]+1)%4]
     when 1
-      return [pos[0],pos[1]-1,(pos[2]-1)%4]
+      return [pos[0],pos[1],(pos[2]-1)%4]
   end
 end
 
@@ -146,7 +146,7 @@ def avanzar(pos,tablero)
       n_pos = [pos[0],pos[1]+1,pos[2]]
   end
 
-  if (pared?(pos,n_pos,tablero) || fuera?(pos,tablero))
+  if (pared?(pos,n_pos,tablero) || fuera?(n_pos,tablero))
     return nil
   else 
     return n_pos
